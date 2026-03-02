@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include <stdio.h>
+#include <string.h>
 
 static const uint8_t font[80] = {
    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -20,8 +21,16 @@ static const uint8_t font[80] = {
    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
+// Setting sane defaults before launching our emulator
 void emu_init(CPU *c) {
-  for (int i = 050; i < 09F; i++) {
+  // Set all attributes to 0
+  memset(c, 0, sizeof(CPU));
+
+  // Set our starting address
+  c->pc = START_ADDR;
+
+  // Then load font into memory from 0x50 to 0x9F
+  for (int i = 0x50; i < 0x9F; i++) {
     c->mem[i] = font[i];
   }
 }
@@ -41,7 +50,7 @@ bool emu_load_rom(CPU *c, const char *path) {
 void emu_cycle(CPU *c) {
   // Fetch
   uint8_t high = c->mem[c->pc];
-  uint8_t low = c->mem[c->pc];
+  uint8_t low = c->mem[c->pc + 1];
   uint16_t opcode = (high << 8) | low;
   c->pc += 2;
   // Decode
@@ -51,11 +60,14 @@ void emu_cycle(CPU *c) {
   uint8_t nn = (opcode & 0x00ff);
   uint16_t address = (opcode & 0x0fff);
   uint8_t id = (opcode & 0xf000) >> 12;
+  printf("PC: %04X, opcode: %04X\n", c->pc, opcode);
   // Execute
   switch (id) {
     case 0x0: { // Clear screen
-      for (int i = 0; i < (64 * 32); i++) {
-        c->screen[i] = 0;
+      if (opcode == 0x00e0) {
+        for (int i = 0; i < (64 * 32); i++) {
+          c->screen[i] = 0;
+        }
       }
       break;
     }
@@ -72,27 +84,30 @@ void emu_cycle(CPU *c) {
       break;
     }
     case 0xA: { // SET I
-      c->I = nnn;
+      c->I = address;
+      break;
     }
     case 0xD: { // DRAW
       uint8_t x_coord = c->v_reg[x] % 64;
       uint8_t y_coord = c->v_reg[y] % 32;
       c->v_reg[0xf] = 0; // setting flag to 0
       for (int row = 0; row < n; row++) {
-        uint8_t sprite_byte = c->mem[c->I + row];
+        // One byte is one sprite in CHIP8
+        // Retrieve each byte from memory using the pointer I
+        uint8_t byte = c->mem[c->I + row];
         for (int col = 0; col < 8; col++) {
-          uint8_t sprite_pixel = (sprite_byte >> (7-col)) & 1;
+          uint8_t bit = (byte >> (7-col)) & 1; // getting every bit (pixel)
           int screen_x = (x_coord + col) % 64;
           int screen_y = (y_coord + row) % 32;
-          int *screen_pixel = &c->screen[y_coord * 64 + x_coord];
-          if (*pixel == 1) c->v_reg[0xF] = 1;
-          *pixel ^= 1;
+          uint8_t *pixel = &c->screen[screen_y * 64 + screen_x]; // getting pixels from screen
+          if (bit) {
+            if (*pixel == 1) c->v_reg[0xF] = 1; // Set a flag if screen pixel is also toggled
+            *pixel ^= 1; // toggle on and off depending on initial state
+          } 
         }
-
       }
-
+      break;
     }
-
   }
 }
 
@@ -101,4 +116,3 @@ void emu_update_timers(CPU *c) {
   c->s_timer--;
 }
 
-#endif

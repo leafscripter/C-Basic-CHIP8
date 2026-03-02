@@ -1,8 +1,8 @@
-#include <stdint.h>
-#include <stdbool.h>
-
 #ifndef CHIP8_H
 #define CHIP8_H
+
+#include <stdint.h>
+#include <stdbool.h>
 
 #define START_ADDR 0x200
 #define MEM_BOUND 4096
@@ -22,8 +22,8 @@ typedef struct {
 } CPU;
 
 void emu_init(CPU *c);
-bool emu_load_rom(CPU *c; const char *path);
+bool emu_load_rom(CPU *c, const char *path);
 void emu_cycle(CPU *c);
 void emu_update_timers(CPU *c);
 
-
+#endif
