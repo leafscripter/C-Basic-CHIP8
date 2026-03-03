@@ -8,6 +8,12 @@
 #define MEM_BOUND 4096
 #define FONT_COUNT 80
 
+typedef enum {
+  STATE_RUNNING,
+  STATE_PAUSED,
+  STATE_STEP,
+} EmulatorState;
+
 typedef struct {
   uint8_t mem[MEM_BOUND]; 
   uint8_t screen[64 * 32];
@@ -19,6 +25,8 @@ typedef struct {
   uint8_t s_timer;
   uint8_t v_reg[16];
   uint8_t keys[16];
+  uint16_t curr_op;
+  EmulatorState state;
 } CPU;
 
 void emu_init(CPU *c);
